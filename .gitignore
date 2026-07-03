@@ -59,6 +59,7 @@ reports/*
 # results are visible without retraining. The model binary stays regenerable.
 !data/sample/
 !models/metrics.json
+!models/comparison.json
 !reports/*.png
 !.gitkeep
 

@@ -11,6 +11,9 @@ filterwarnings = [
     # warning-clean; silence the noise so real warnings stay visible.
     "ignore::DeprecationWarning:starlette.*",
     "ignore:.*Setting the shape on a NumPy array.*:DeprecationWarning",
+    # Some detector tests use a low max_iter for speed (they check the interface,
+    # not convergence); the shipped models use enough iterations to converge.
+    "ignore::sklearn.exceptions.ConvergenceWarning",
 ]
 
 [tool.ruff]

@@ -71,7 +71,44 @@ Regenerate the figures anytime with
 
 ---
 
-## Why Isolation Forest
+## Two detectors: a head-to-head comparison
+
+The project ships **two** unsupervised detectors behind one shared interface
+([`src/detectors.py`](src/detectors.py)), so you can swap models without touching
+the trainer or the API:
+
+- **Isolation Forest** — a tree ensemble that isolates anomalies in a few random splits.
+- **Autoencoder** — a bottleneck neural network (`15 → 12 → 6 → 12 → 15`, scikit-learn
+  `MLPRegressor`) trained to *reconstruct* legitimate behavior. Cheaters fall outside
+  the learned "normal" manifold and reconstruct poorly, so the **mean squared
+  reconstruction error** is the anomaly score.
+
+Both are trained on the *same* normal split and evaluated on the *same* hold-out
+(`python -m src.compare`, results in `models/comparison.json`):
+
+| Metric | Isolation Forest | Autoencoder |
+| ------ | ---------------- | ----------- |
+| ROC-AUC | 0.996 | 0.997 |
+| Average precision | 0.975 | 0.979 |
+| Precision | **0.952** | 0.916 |
+| Recall | 0.992 | **1.000** |
+| F1 | **0.971** | 0.956 |
+| Confusion `(TN, FP, FN, TP)` | `444, 6, 1, 119` | `439, 11, 0, 120` |
+
+![Detector comparison — ROC](reports/model_comparison.png)
+
+**The interesting part isn't a winner — it's the tradeoff.** The two models sit on
+different points of the precision/recall frontier: the **autoencoder catches every
+cheater** (recall 1.0, zero misses) but raises more false alarms, while the
+**Isolation Forest is more precise** (fewer wrongful flags) at the cost of missing
+one cheater. Which you deploy depends on whether your anti-cheat prioritizes
+*catching everyone* or *never banning an innocent player*. The Isolation Forest is
+the default (best F1 and precision, and near-instant inference); train the other with
+`python -m src.train --model autoencoder`.
+
+---
+
+## Why unsupervised anomaly detection
 
 Cheating is **rare, unlabeled, and adversarial**. We can't assume we have a clean,
 balanced set of "cheater" examples, and cheaters change their tooling constantly.
@@ -174,7 +211,8 @@ flowchart LR
     G["src/generate_data.py<br/>seeded normal + cheater sim"] --> D["src/data.py<br/>nested sessions → flat frame"]
     D --> F["src/features.py<br/>15-dim feature vector"]
     F --> T["src/train.py<br/>fit on normal · calibrate threshold"]
-    T --> M[("models/model.joblib<br/>+ metrics.json")]
+    T --> DET["src/detectors.py<br/>Isolation Forest · Autoencoder"]
+    DET --> M[("models/model.joblib<br/>+ metrics.json")]
     M --> A["api/main.py<br/>FastAPI · /score · /health"]
     F --> A
     A --> RESP["JSON response<br/>anomaly_score · is_anomaly · top_features"]
@@ -202,12 +240,14 @@ telemetry-anomaly-detector/
 │   ├── generate_data.py  # seeded synthetic telemetry generator (normal + cheater)
 │   ├── data.py           # nested sessions → flat per-tick frame + labels (train/eval bridge)
 │   ├── features.py       # per-tick telemetry → 15-dim behavioral feature vector
-│   ├── model.py          # IsolationForest wrapper: fit / score / calibrate / save / load
-│   ├── train.py          # CLI: generate → featurize → fit → calibrate → persist
+│   ├── detectors.py      # shared interface + IsolationForest and Autoencoder detectors
+│   ├── model.py          # back-compat shim: AnomalyModel = IsolationForestDetector
+│   ├── train.py          # CLI: featurize → fit (--model) → calibrate → persist
+│   ├── compare.py        # CLI: benchmark both detectors head-to-head (table + ROC)
 │   └── evaluate.py       # CLI: metrics + ROC / score-hist / feature-distribution figures
 ├── api/
 │   └── main.py           # FastAPI app: POST /score, POST /score/batch, GET /health
-├── tests/                # pytest suite (generate, features, model, API contract)
+├── tests/                # pytest suite (generate, features, detectors, model, API)
 ├── data/
 │   ├── raw/              # generated per-tick session logs (gitignored)
 │   └── sample/           # small committed demo sessions
@@ -216,7 +256,7 @@ telemetry-anomaly-detector/
 ├── requirements.txt      # loose top-level dependencies
 ├── requirements-lock.txt # exact reproducible pins (tested on Python 3.14)
 ├── pyproject.toml        # pytest + ruff configuration
-├── Makefile              # make data / train / serve / test / evaluate
+├── Makefile              # make data / train / compare / serve / test / evaluate
 └── .github/workflows/ci.yml
 ```
 
@@ -256,15 +296,17 @@ legitimate sessions, calibrates the threshold to a 2% false-positive rate, and w
 `models/model.joblib` + `models/metrics.json`. It prints the evaluation report.
 
 ```bash
-python -m src.train
+python -m src.train                     # Isolation Forest (default)
+python -m src.train --model autoencoder  # or the neural autoencoder
 ```
 
-### 3. (Optional) Generate a dataset file and evaluation figures
+### 3. (Optional) Compare the models, or render evaluation figures
 
-Training generates its data in memory, but you can also write a dataset to disk and
-render the report figures:
+Benchmark both detectors head-to-head, and/or write a dataset to disk and render the
+report figures:
 
 ```bash
+python -m src.compare                                # both models, table + ROC figure
 python -m src.generate_data --n-normal 1200 --n-cheater 300 --out data/raw/sessions.jsonl
 python -m src.evaluate --dataset data/raw/sessions.jsonl --model models/model.joblib
 ```
@@ -432,9 +474,11 @@ redefined) by every other module. The most relevant knobs:
 - **Static, non-adversarial model.** Cheats evolve; there is no drift handling or online
   retraining, and a determined adversary who mimics human jitter and pathing (high
   `--difficulty`) can slip under the strict-FPR operating point.
-- **Deeper models.** An autoencoder, or a temporal model (LSTM / temporal-CNN over the
-  raw tick sequence), could learn behavior end-to-end instead of relying on hand-built
-  aggregate features — the natural `v0.2` direction.
+- **Deeper models.** A neural **autoencoder** is now implemented and benchmarked (see
+  [the comparison](#two-detectors-a-head-to-head-comparison)); it still consumes the same
+  hand-built aggregate features. A true end-to-end **temporal model** (LSTM / temporal-CNN
+  over the raw tick sequence) that learns behavior directly from the stream is the natural
+  next step.
 
 ---
 

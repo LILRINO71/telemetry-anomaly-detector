@@ -13,7 +13,7 @@ CODE_DIRS := src api tests
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install install-dev lock lint format format-check test data train evaluate serve clean
+.PHONY: help install install-dev lock lint format format-check test data train compare evaluate serve clean
 
 help: ## Show this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -48,6 +48,9 @@ data: ## Generate a synthetic telemetry dataset at data/raw/sessions.jsonl.
 
 train: ## Generate data (in memory) and train the anomaly-detection model.
 	$(PYTHON) -m src.train
+
+compare: ## Benchmark the Isolation Forest vs the autoencoder (table + ROC figure).
+	$(PYTHON) -m src.compare
 
 evaluate: ## Render ROC / score / feature-distribution figures into reports/.
 	$(PYTHON) -m src.evaluate --dataset data/raw/sessions.jsonl --model models/model.joblib

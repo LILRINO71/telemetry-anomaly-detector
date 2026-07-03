@@ -1,0 +1,44 @@
+{
+  "difficulty": 0.88,
+  "n_cheater": 400,
+  "n_normal": 1500,
+  "results": {
+    "autoencoder": {
+      "average_precision": 0.9786819023137618,
+      "confusion_matrix": {
+        "fn": 0,
+        "fp": 11,
+        "tn": 439,
+        "tp": 120
+      },
+      "f1": 0.9561752988047809,
+      "model_kind": "autoencoder",
+      "n_test": 570,
+      "n_test_negative": 450,
+      "n_test_positive": 120,
+      "precision": 0.916030534351145,
+      "recall": 1.0,
+      "roc_auc": 0.9966481481481482,
+      "threshold": 0.953115139353498
+    },
+    "isolation_forest": {
+      "average_precision": 0.9751114177888619,
+      "confusion_matrix": {
+        "fn": 1,
+        "fp": 6,
+        "tn": 444,
+        "tp": 119
+      },
+      "f1": 0.9714285714285714,
+      "model_kind": "isolation_forest",
+      "n_test": 570,
+      "n_test_negative": 450,
+      "n_test_positive": 120,
+      "precision": 0.952,
+      "recall": 0.9916666666666667,
+      "roc_auc": 0.9959259259259259,
+      "threshold": 0.5646602884271095
+    }
+  },
+  "seed": 1337
+}

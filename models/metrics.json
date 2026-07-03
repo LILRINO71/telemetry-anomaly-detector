@@ -24,6 +24,7 @@
     "aim_speed_bimodality",
     "angle_grid_residual"
   ],
+  "model_kind": "isolation_forest",
   "model_version": "0.1.0",
   "n_test": 570,
   "n_test_negative": 450,

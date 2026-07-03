@@ -10,6 +10,7 @@ verdict (ranked by ``|zscore|``).
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
@@ -31,6 +32,8 @@ from src.config import (
     MODEL_VERSION,
     N_FEATURES,
 )
+
+logger = logging.getLogger(__name__)
 
 _TOP_K = 5
 
@@ -113,6 +116,9 @@ class HealthResponse(BaseModel):
 
     status: str
     model_loaded: bool
+    model_kind: str | None = Field(
+        default=None, description="Which detector is serving (isolation_forest / autoencoder)."
+    )
     model_version: str = Field(default=MODEL_VERSION)
     n_features: int = Field(default=N_FEATURES)
 
@@ -132,10 +138,20 @@ class RootResponse(BaseModel):
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Load the persisted model into ``app.state`` for the app's lifetime."""
+    """Load the persisted model into ``app.state`` for the app's lifetime.
+
+    Uses the kind-agnostic loader, so whichever detector was trained
+    (Isolation Forest or autoencoder) is served transparently. A missing or
+    unreadable artifact degrades to "model not loaded" (health reports it, /score
+    returns 503) rather than crashing the service on startup.
+    """
     app.state.model = None
     if MODEL_PATH.exists():
-        app.state.model = model_mod.AnomalyModel.load(MODEL_PATH)
+        try:
+            app.state.model = model_mod.load_detector(MODEL_PATH)
+        except Exception:  # noqa: BLE001 - a bad artifact must not take down the API
+            logger.exception("Failed to load model from %s; serving without a model.", MODEL_PATH)
+            app.state.model = None
     yield
     app.state.model = None
 
@@ -284,8 +300,12 @@ def root(request: Request) -> RootResponse:
 @app.get("/health")
 def health(request: Request) -> HealthResponse:
     """Report liveness and whether the model is loaded and ready."""
-    loaded = getattr(request.app.state, "model", None) is not None
-    return HealthResponse(status="ok", model_loaded=loaded)
+    model = getattr(request.app.state, "model", None)
+    return HealthResponse(
+        status="ok",
+        model_loaded=model is not None,
+        model_kind=getattr(model, "kind", None),
+    )
 
 
 @app.post("/score")

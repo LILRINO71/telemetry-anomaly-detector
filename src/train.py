@@ -36,7 +36,7 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 
 from . import config
-from .model import AnomalyModel
+from .detectors import DETECTOR_KINDS, BaseAnomalyDetector, make_detector
 
 
 def build_dataset(
@@ -75,7 +75,7 @@ def build_dataset(
 
 
 def evaluate(
-    model: AnomalyModel,
+    model: BaseAnomalyDetector,
     X_test: pd.DataFrame,
     y_test: NDArray[np.int64],
 ) -> dict[str, Any]:
@@ -110,11 +110,13 @@ def train(
     test_size: float = 0.3,
     seed: int = config.DEFAULT_SEED,
     difficulty: float = 0.88,
+    model_kind: str = "isolation_forest",
     model_path: Path = config.MODEL_PATH,
     metrics_path: Path = config.METRICS_PATH,
 ) -> dict[str, Any]:
     """Run the full fit + evaluate pipeline and persist artifacts.
 
+    ``model_kind`` selects the detector (see ``src.detectors.DETECTOR_KINDS``).
     Returns the metrics dictionary that is also written to ``metrics_path``.
     """
     X, y = build_dataset(n_normal=n_normal, n_cheater=n_cheater, seed=seed, difficulty=difficulty)
@@ -135,10 +137,11 @@ def train(
             f"({X_train_normal.shape[0]} < {config.N_FEATURES})."
         )
 
-    model = AnomalyModel(target_fpr=config.TARGET_FPR, random_state=seed)
+    model = make_detector(model_kind, target_fpr=config.TARGET_FPR, random_state=seed)
     model.fit(X_train_normal)
 
     metrics = evaluate(model, X_test, y_test)
+    metrics["model_kind"] = model_kind
     metrics["model_version"] = config.MODEL_VERSION
     metrics["target_fpr"] = config.TARGET_FPR
     metrics["n_train_normal"] = int(X_train_normal.shape[0])
@@ -170,6 +173,12 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Cheater/normal overlap in [0, 1]; higher = harder (default: 0.88).",
     )
     parser.add_argument(
+        "--model",
+        choices=DETECTOR_KINDS,
+        default="isolation_forest",
+        help="Detector to train (default: isolation_forest).",
+    )
+    parser.add_argument(
         "--model-path", type=Path, default=config.MODEL_PATH, help="Output model path."
     )
     parser.add_argument(
@@ -187,11 +196,12 @@ def main(argv: list[str] | None = None) -> None:
         test_size=args.test_size,
         seed=args.seed,
         difficulty=args.difficulty,
+        model_kind=args.model,
         model_path=args.model_path,
         metrics_path=args.metrics_path,
     )
     cm = metrics["confusion_matrix"]
-    print(f"Model written to : {args.model_path}")
+    print(f"Model ({metrics['model_kind']}) written to : {args.model_path}")
     print(f"Metrics written to: {args.metrics_path}")
     print(f"  ROC-AUC        : {metrics['roc_auc']:.4f}")
     print(f"  Avg precision  : {metrics['average_precision']:.4f}")
