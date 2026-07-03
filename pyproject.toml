@@ -1,0 +1,22 @@
+# Tooling configuration for telemetry-anomaly-detector.
+# (Dependencies live in requirements.txt / requirements-lock.txt; this file
+# configures the test runner and linters only.)
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+    # Library-internal deprecations we don't control (starlette TestClient's
+    # httpx shim, and joblib's array-reshape on NumPy 2.5). Our own code is
+    # warning-clean; silence the noise so real warnings stay visible.
+    "ignore::DeprecationWarning:starlette.*",
+    "ignore:.*Setting the shape on a NumPy array.*:DeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+ignore = ["E501"]

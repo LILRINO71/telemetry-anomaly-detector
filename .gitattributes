@@ -1,0 +1,7 @@
+# Normalize line endings to LF in the repo (consistent across Windows / Linux CI).
+* text=auto eol=lf
+
+# Binary assets: never touch line endings or diff.
+*.png binary
+*.joblib binary
+*.jsonl text eol=lf

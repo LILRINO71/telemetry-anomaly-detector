@@ -1,0 +1,38 @@
+{
+  "average_precision": 0.9751114177888619,
+  "confusion_matrix": {
+    "fn": 1,
+    "fp": 6,
+    "tn": 444,
+    "tp": 119
+  },
+  "f1": 0.9714285714285714,
+  "feature_names": [
+    "path_efficiency",
+    "mean_step_speed",
+    "speed_cv",
+    "vertical_travel_ratio",
+    "heading_change_mean",
+    "blocks_broken",
+    "valuable_ore_ratio",
+    "non_ore_dig_ratio",
+    "ore_discovery_rate",
+    "dig_direction_entropy",
+    "yaw_snap_rate",
+    "pitch_snap_rate",
+    "aim_still_jitter",
+    "aim_speed_bimodality",
+    "angle_grid_residual"
+  ],
+  "model_version": "0.1.0",
+  "n_test": 570,
+  "n_test_negative": 450,
+  "n_test_positive": 120,
+  "n_train_normal": 1050,
+  "precision": 0.952,
+  "recall": 0.9916666666666667,
+  "roc_auc": 0.9959259259259259,
+  "seed": 1337,
+  "target_fpr": 0.02,
+  "threshold": 0.5646602884271095
+}
