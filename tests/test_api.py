@@ -32,11 +32,19 @@ def api_model() -> AnomalyModel:
 
 @pytest.fixture()
 def client(api_model: AnomalyModel) -> TestClient:
-    """TestClient whose ``get_model`` dependency yields the fixture model."""
+    """TestClient wired to the fixture model.
+
+    Overrides ``get_model`` (used by the scoring routes) *and* injects the model
+    into ``app.state`` (read directly by ``/health`` and ``/``), so the client is
+    self-contained and does not depend on a trained ``model.joblib`` existing on
+    disk.
+    """
     api_main.app.dependency_overrides[api_main.get_model] = lambda: api_model
     with TestClient(api_main.app) as c:
+        c.app.state.model = api_model
         yield c
     api_main.app.dependency_overrides.clear()
+    api_main.app.state.model = None
 
 
 def _events(label: str, seed: int) -> list[dict]:
