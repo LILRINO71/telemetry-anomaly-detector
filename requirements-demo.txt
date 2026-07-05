@@ -1,0 +1,12 @@
+# Optional dependencies for the interactive Streamlit demo (streamlit_app.py).
+# Installs the core requirements plus Streamlit in one shot:
+#
+#   pip install -r requirements-demo.txt
+#   streamlit run streamlit_app.py
+#
+# Kept separate from requirements.txt / requirements-lock.txt so the core library
+# and CI stay lightweight (Streamlit is only needed to run the demo UI).
+
+-r requirements.txt
+
+streamlit>=1.40,<2.0

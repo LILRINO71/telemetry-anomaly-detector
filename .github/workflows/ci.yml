@@ -40,10 +40,10 @@ jobs:
           python -m pip install -r requirements-lock.txt
 
       - name: Lint with ruff
-        run: python -m ruff check src api tests
+        run: python -m ruff check src api tests streamlit_app.py
 
       - name: Check formatting with ruff
-        run: python -m ruff format --check src api tests
+        run: python -m ruff format --check src api tests streamlit_app.py
 
       - name: Run tests
         run: python -m pytest

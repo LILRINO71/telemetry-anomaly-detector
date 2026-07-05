@@ -9,11 +9,11 @@ PYTHON ?= python
 PIP := $(PYTHON) -m pip
 
 # Source trees that linting, formatting, and type checks apply to.
-CODE_DIRS := src api tests
+CODE_DIRS := src api tests streamlit_app.py
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install install-dev lock lint format format-check test data train compare evaluate serve clean
+.PHONY: help install install-dev lock lint format format-check test data train compare evaluate serve demo clean
 
 help: ## Show this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -57,6 +57,9 @@ evaluate: ## Render ROC / score / feature-distribution figures into reports/.
 
 serve: ## Run the FastAPI inference server with autoreload.
 	$(PYTHON) -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+
+demo: ## Launch the interactive Streamlit demo (needs: pip install -r requirements-demo.txt).
+	$(PYTHON) -m streamlit run streamlit_app.py
 
 clean: ## Remove caches and generated pipeline artifacts.
 	rm -rf .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov coverage.xml

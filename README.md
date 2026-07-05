@@ -108,6 +108,32 @@ the default (best F1 and precision, and near-instant inference); train the other
 
 ---
 
+## Interactive demo
+
+An interactive **Streamlit** dashboard ([`streamlit_app.py`](streamlit_app.py)) makes the
+whole thing clickable — generate or paste a player session, pick a detector, and watch
+the verdict update live:
+
+```bash
+pip install -r requirements-demo.txt
+streamlit run streamlit_app.py     # then open http://localhost:8501
+```
+
+The model trains on first load and is cached, so **no pre-trained artifact is needed** —
+which also makes it one-click deployable to
+[Streamlit Community Cloud](https://streamlit.io/cloud) (point it at `streamlit_app.py`).
+
+What you can do:
+
+- **Generate** a normal or cheating session and drag the *mimicry* slider to watch a
+  blatant cheater blend toward human behavior (and the verdict flip).
+- **Paste** your own session JSON (the same schema as `POST /score`).
+- See the **anomaly score vs. the calibrated threshold**, the flag decision, the **top
+  features** that drove it (signed z-scores), and top-down **path** + **aim-over-time**
+  plots that make the cheating *visible* (beelines and robotic snaps vs. human wandering).
+
+---
+
 ## Why unsupervised anomaly detection
 
 Cheating is **rare, unlabeled, and adversarial**. We can't assume we have a clean,
@@ -240,6 +266,7 @@ telemetry-anomaly-detector/
 │   ├── generate_data.py  # seeded synthetic telemetry generator (normal + cheater)
 │   ├── data.py           # nested sessions → flat per-tick frame + labels (train/eval bridge)
 │   ├── features.py       # per-tick telemetry → 15-dim behavioral feature vector
+│   ├── scoring.py        # framework-free scoring helpers (shared by the demo)
 │   ├── detectors.py      # shared interface + IsolationForest and Autoencoder detectors
 │   ├── model.py          # back-compat shim: AnomalyModel = IsolationForestDetector
 │   ├── train.py          # CLI: featurize → fit (--model) → calibrate → persist
@@ -253,10 +280,12 @@ telemetry-anomaly-detector/
 │   └── sample/           # small committed demo sessions
 ├── models/               # model.joblib (gitignored, regenerable) + metrics.json
 ├── reports/              # ROC / score / feature-distribution figures
+├── streamlit_app.py      # interactive Streamlit demo (deployable to Streamlit Cloud)
 ├── requirements.txt      # loose top-level dependencies
 ├── requirements-lock.txt # exact reproducible pins (tested on Python 3.14)
+├── requirements-demo.txt # core deps + Streamlit, for the demo
 ├── pyproject.toml        # pytest + ruff configuration
-├── Makefile              # make data / train / compare / serve / test / evaluate
+├── Makefile              # make data / train / compare / demo / serve / test / evaluate
 └── .github/workflows/ci.yml
 ```
 
