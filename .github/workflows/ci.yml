@@ -47,3 +47,42 @@ jobs:
 
       - name: Run tests
         run: python -m pytest
+
+  docker:
+    name: Docker build & API smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build API image (trains + bakes the model)
+        run: docker build --target api -t tad-api .
+
+      - name: Build demo image
+        run: docker build --target demo -t tad-demo .
+
+      - name: Run the API container
+        run: docker run -d --name tad-api -p 8000:8000 tad-api
+
+      - name: Smoke-test /health and /score
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then ready=1; break; fi
+            sleep 2
+          done
+          test "${ready:-0}" = "1"
+          echo
+          curl -sf http://localhost:8000/health | grep -q '"model_loaded":true'
+          # A too-short session must be rejected with 422.
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8000/score \
+            -H 'Content-Type: application/json' \
+            -d '{"events":[{"tick":0,"x":0,"y":0,"z":0,"yaw":0,"pitch":0}]}')
+          test "$code" = "422"
+
+      - name: Container logs (on failure)
+        if: failure()
+        run: docker logs tad-api || true
+
+      - name: Tear down
+        if: always()
+        run: docker rm -f tad-api || true

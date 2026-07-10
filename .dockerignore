@@ -1,0 +1,27 @@
+# Keep the build context small and reproducible.
+.git
+.github
+.gitignore
+.gitattributes
+
+# Virtual envs / caches
+.venv
+venv
+**/__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Regenerable / bulky artifacts (the API image trains its own model)
+models/*.joblib
+data/raw
+data/processed
+notebooks
+
+# Dev-only files not needed at runtime
+tests
+requirements-demo.txt
+*.md
+LICENSE
+.claude

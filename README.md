@@ -8,6 +8,7 @@
 [![Python](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.9-orange.svg)](https://scikit-learn.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.139-009688.svg)](https://fastapi.tiangolo.com/)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED.svg)](#run-with-docker)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](#license)
 
 ---
@@ -131,6 +132,35 @@ What you can do:
 - See the **anomaly score vs. the calibrated threshold**, the flag decision, the **top
   features** that drove it (signed z-scores), and top-down **path** + **aim-over-time**
   plots that make the cheating *visible* (beelines and robotic snaps vs. human wandering).
+
+---
+
+## Run with Docker
+
+A multi-stage [`Dockerfile`](Dockerfile) builds two images — the API (with a trained
+model baked in) and the Streamlit demo — and [`docker-compose.yml`](docker-compose.yml)
+runs both with one command:
+
+```bash
+docker compose up --build
+#   API   -> http://localhost:8000   (interactive docs at /docs)
+#   Demo  -> http://localhost:8501
+```
+
+Or build and run a single service:
+
+```bash
+docker build -t tad-api .                    # API (default target); trains + bakes the model
+docker run --rm -p 8000:8000 tad-api
+
+docker build -t tad-demo --target demo .     # Streamlit demo
+docker run --rm -p 8501:8501 tad-demo
+```
+
+The API image trains the model at build time, so `docker run` serves real scores
+immediately — no volume mount or startup step. Both images run as a non-root user and
+declare a `HEALTHCHECK`. CI builds both targets and smoke-tests the running API on every
+push, so the Dockerfile can't silently rot.
 
 ---
 
@@ -281,11 +311,14 @@ telemetry-anomaly-detector/
 ├── models/               # model.joblib (gitignored, regenerable) + metrics.json
 ├── reports/              # ROC / score / feature-distribution figures
 ├── streamlit_app.py      # interactive Streamlit demo (deployable to Streamlit Cloud)
+├── Dockerfile            # multi-stage build: api (default) + demo targets
+├── docker-compose.yml    # run the API and the demo together
+├── .dockerignore
 ├── requirements.txt      # loose top-level dependencies
 ├── requirements-lock.txt # exact reproducible pins (tested on Python 3.14)
 ├── requirements-demo.txt # core deps + Streamlit, for the demo
 ├── pyproject.toml        # pytest + ruff configuration
-├── Makefile              # make data / train / compare / demo / serve / test / evaluate
+├── Makefile              # make data / train / compare / demo / serve / docker-* / test
 └── .github/workflows/ci.yml
 ```
 

@@ -13,7 +13,7 @@ CODE_DIRS := src api tests streamlit_app.py
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install install-dev lock lint format format-check test data train compare evaluate serve demo clean
+.PHONY: help install install-dev lock lint format format-check test data train compare evaluate serve demo docker-build docker-run docker-up clean
 
 help: ## Show this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -60,6 +60,15 @@ serve: ## Run the FastAPI inference server with autoreload.
 
 demo: ## Launch the interactive Streamlit demo (needs: pip install -r requirements-demo.txt).
 	$(PYTHON) -m streamlit run streamlit_app.py
+
+docker-build: ## Build the API Docker image (trains + bakes the model).
+	docker build -t tad-api .
+
+docker-run: ## Run the API image on http://localhost:8000.
+	docker run --rm -p 8000:8000 tad-api
+
+docker-up: ## Build and run both the API and the demo via docker compose.
+	docker compose up --build
 
 clean: ## Remove caches and generated pipeline artifacts.
 	rm -rf .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov coverage.xml

@@ -1,0 +1,26 @@
+# One command to run both services:
+#   docker compose up --build
+#
+#   API   -> http://localhost:8000  (docs at /docs)
+#   Demo  -> http://localhost:8501
+
+services:
+  api:
+    build:
+      context: .
+      target: api
+    image: telemetry-anomaly-detector-api
+    container_name: tad-api
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  demo:
+    build:
+      context: .
+      target: demo
+    image: telemetry-anomaly-detector-demo
+    container_name: tad-demo
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
